@@ -1,76 +1,79 @@
-import { useState } from "react";
+import { useReducer } from "react";
 import { operations, numbers } from "./data";
+import { instructionsReducer } from "./machine";
 
 const Calculator = () => {
-  const [lastPressed, setLastPressed] = useState("");
-  const [currentNumber, setCurrentNumber] = useState("");
-  const [previousNumber, setPreviousNumber] = useState("");
-  const [operation, setOperation] = useState("");
+  const initialState = {
+    previousNumber: "",
+    lastPressed: "",
+    currentNumber: "",
+    operation: "",
+  };
 
-  const handleNumberClick = (e: any) => {
+  const [state, dispatch] = useReducer(instructionsReducer, initialState);
+
+  const handleNumberPress = (e: any) => {
     const value = e.target.innerText;
 
     if (!Number.isNaN(Number(value))) {
-      if (lastPressed === "=" && operation === "=") {
-        setLastPressed(value);
-        setCurrentNumber(value);
-        setOperation("");
-        setPreviousNumber("");
+      if (state.lastPressed === "=" && state.operation === "=") {
+        dispatch({
+          type: "FIRST_NUMBER",
+          payload: value,
+        });
       } else {
-        if (currentNumber === "0") {
-          setLastPressed(value);
-          setCurrentNumber(value);
+        if (state.currentNumber === "0") {
+          dispatch({
+            type: "ADD_NUMBER_TO_ZERO",
+            payload: value,
+          });
         } else {
-          setLastPressed(value);
-          setCurrentNumber(currentNumber + value);
+          dispatch({
+            type: "ADD_NUMBER",
+            payload: value,
+          });
         }
       }
       return;
     }
   };
 
-  const handleAcClick = (e: any) => {
+  const handleAcPress = (e: any) => {
     const value = e.target.innerText;
 
-    setLastPressed(value);
-    setCurrentNumber("0");
-    setOperation("");
-    setPreviousNumber("");
+    dispatch({
+      type: "AC",
+      payload: value,
+    });
   };
 
-  const handleDecimalClick = (e: any) => {
+  const handleDecimalPress = (e: any) => {
     const value = e.target.innerText;
 
-    if (!currentNumber.includes(".")) {
-      setCurrentNumber(currentNumber + value);
+    if (!state.currentNumber.includes(".")) {
+      dispatch({
+        type: "ADD_DECIMAL",
+        payload: value,
+      });
     }
   };
 
-  const calculate = (operation: string) => {
-    return Function(`"use strinct"; return (${operation})`)();
-  };
-
-  const handleOperationClick = (e: any) => {
+  const handleOperationPress = (e: any) => {
     const value = e.target.innerText;
-    var evaluated = "";
 
     switch (value) {
       case "=": {
-        if (!operation) {
+        if (!state.operation) {
           return false;
-        } else if (currentNumber === "-") {
+        } else if (state.currentNumber === "-") {
           return false;
-        } else if (lastPressed === "=" && operation === "=") {
+        } else if (state.lastPressed === "=" && state.operation === "=") {
           return false;
         } else {
-          evaluated = calculate(
-            `${previousNumber} ${operation} ${currentNumber}`
-          );
-
-          setLastPressed(value);
-          setCurrentNumber(evaluated);
-          setOperation(value);
-          setPreviousNumber(`${previousNumber} ${operation}  ${currentNumber}`);
+          dispatch({
+            type: "EQUAL",
+            payload: value,
+          });
         }
         break;
       }
@@ -78,47 +81,49 @@ const Calculator = () => {
       case "*":
       case "/":
       case "+": {
-        // If last pressed is equal, use result as first number
-        if (lastPressed === "=" && operation === "=") {
-          setLastPressed(value);
-          setCurrentNumber("0");
-          setOperation(value);
-          setPreviousNumber(currentNumber);
-        } else if (currentNumber === "0" && lastPressed !== "") {
-          setLastPressed(value);
-          setOperation(value);
-        }
-        // Pressing operation for the firt time
-        else if (!operation) {
-          setLastPressed(value);
-          setCurrentNumber("0");
-          setOperation(value);
-          setPreviousNumber(currentNumber);
-        } else if (currentNumber !== "-") {
-          setLastPressed(value);
-          setCurrentNumber("0");
-          setOperation(value);
-          setPreviousNumber(`${previousNumber} ${operation}  ${currentNumber}`);
+        if (state.lastPressed === "=" && state.operation === "=") {
+          dispatch({
+            type: "OPERATION_FIRST_TIME",
+            payload: value,
+          });
+        } else if (state.currentNumber === "0" && state.lastPressed !== "") {
+          dispatch({
+            type: "OPERATION_AFTER_ZERO",
+            payload: value,
+          });
+        } else if (!state.operation) {
+          dispatch({
+            type: "OPERATION_FIRST_TIME",
+            payload: value,
+          });
+        } else if (state.currentNumber !== "-") {
+          dispatch({
+            type: "PREPARE_OPERATION",
+            payload: value,
+          });
         } else {
-          setLastPressed(value);
-          setCurrentNumber("0");
-          setOperation(value);
+          dispatch({
+            type: "OPERATION",
+            payload: value,
+          });
         }
         break;
       }
 
       case "-": {
-        if (lastPressed === "-") {
+        if (state.lastPressed === "-") {
           return false;
         }
-        if (currentNumber === "0") {
-          setLastPressed(value);
-          setCurrentNumber(value);
+        if (state.currentNumber === "0") {
+          dispatch({
+            type: "SUST_AFTER_ZERO",
+            payload: value,
+          });
         } else {
-          setLastPressed(value);
-          setCurrentNumber("0");
-          setOperation(value);
-          setPreviousNumber(`${previousNumber} ${operation}  ${currentNumber}`);
+          dispatch({
+            type: "PREPARE_OPERATION",
+            payload: value,
+          });
         }
         break;
       }
@@ -129,11 +134,12 @@ const Calculator = () => {
     }
   };
 
-  const thisCurrent = currentNumber === "0" ? "" : currentNumber;
+  const thisCurrent = state.currentNumber === "0" ? "" : state.currentNumber;
+
   const currentOperation =
-    currentNumber === "0" && previousNumber === ""
+    state.currentNumber === "0" && state.previousNumber === ""
       ? ""
-      : `${previousNumber} ${operation}  ${thisCurrent}`;
+      : `${state.previousNumber} ${state.operation}  ${thisCurrent}`;
 
   return (
     <>
@@ -142,14 +148,14 @@ const Calculator = () => {
         <section className="screen">
           <div className="currentOperation">{currentOperation}</div>
           <div className="display" id="display">
-            {currentNumber}
+            {state.currentNumber}
           </div>
         </section>
       </div>
 
       <div className="calculator-buttons">
         <section className="numbers">
-          <button className="ac" id="clear" onClick={handleAcClick}>
+          <button className="ac" id="clear" onClick={handleAcPress}>
             AC
           </button>
 
@@ -158,17 +164,17 @@ const Calculator = () => {
               className="btn__number"
               key={number.value}
               id={number.id}
-              onClick={handleNumberClick}
+              onClick={handleNumberPress}
             >
               {number.value}
             </button>
           ))}
 
-          <button className="dot" id="decimal" onClick={handleDecimalClick}>
+          <button className="dot" id="decimal" onClick={handleDecimalPress}>
             .
           </button>
 
-          <button className="equals" id="equals" onClick={handleOperationClick}>
+          <button className="equals" id="equals" onClick={handleOperationPress}>
             =
           </button>
         </section>
@@ -179,7 +185,7 @@ const Calculator = () => {
               className="btn__operation"
               key={operation.id}
               id={operation.id}
-              onClick={handleOperationClick}
+              onClick={handleOperationPress}
             >
               {operation.value}
             </button>
