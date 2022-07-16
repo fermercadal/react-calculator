@@ -46,6 +46,10 @@ const Calculator = () => {
     }
   };
 
+  const calculate = (operation: string) => {
+    return Function(`"use strinct"; return (${operation})`)();
+  };
+
   const handleOperationClick = (e: any) => {
     const value = e.target.innerText;
     var evaluated = "";
@@ -59,7 +63,9 @@ const Calculator = () => {
         } else if (lastPressed === "=" && operation === "=") {
           return false;
         } else {
-          evaluated = eval(`${previousNumber} ${operation} ${currentNumber}`);
+          evaluated = calculate(
+            `${previousNumber} ${operation} ${currentNumber}`
+          );
 
           setLastPressed(value);
           setCurrentNumber(evaluated);
